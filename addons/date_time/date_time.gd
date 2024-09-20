@@ -101,6 +101,18 @@ func init(input: Variant):
 			if input is DateTime:
 				copy(input)
 		
+		TYPE_STRING_NAME:
+			if input in Season.keys():
+				season_name = input
+			elif input in Month.keys():
+				month_name = input
+			elif input in Weekday.keys():
+				weekday_name = input
+			elif input in Period.keys():
+				period_name = input
+			else:
+				push_error("Unkown StringName: %s." % input)
+		
 		TYPE_STRING:
 			set_date(input)
 
@@ -275,13 +287,11 @@ func get_weekday_name() -> String:
 	return Weekday.keys()[weekday]
 	
 func advance_to_weekday_named(wd: String):
-	if not wd in Weekday.keys():
+	var index := Weekday.keys().find(wd)
+	if index == -1:
 		push_error("No weekday: %s" % wd)
-		return
-	for i in 7:
-		if weekday_name == wd:
-			break
-		advance_to_next_day()
+	else:
+		advance_to_weekday(index as Weekday)
 
 func get_weekday() -> Weekday:
 	# Zeller's congruence.
@@ -342,16 +352,11 @@ func get_month_name() -> String:
 	return Month.keys()[month]
 
 func advance_to_month_named(m: String):
-	var mindex = get_month_from_str(m)
-	if mindex == -1:
+	var index = get_month_from_str(m)
+	if index == -1:
 		push_error("No month: %s." % m)
-		return
-	var d := day_of_month
-	for i in 12:
-		if month == mindex:
-			break
-		advance_to_next_month()
-	day_of_month = d
+	else:
+		advance_to_month(index as Month)
 
 func get_month() -> Month:
 	for i in range(11, -1, -1):
@@ -442,10 +447,11 @@ func get_period_name() -> String:
 	return Period.keys()[period]
 
 func advance_to_period_named(p: String):
-	if p in Period.keys():
-		period = Period.keys().find(p)
-	else:
+	var index := Period.keys().find(p)
+	if index == -1:
 		push_error("No period: %s." % p)
+	else:
+		advance_to_period(index as Period)
 
 func advance_to_next_period():
 	seconds += get_seconds_until_next_period()
@@ -468,8 +474,9 @@ func get_season_name() -> String:
 	return Season.keys()[season]
 	
 func advance_to_season_named(s: String):
-	if s in Season.keys():
-		season = Season.keys().find(s)
+	var index := Season.keys().find(s)
+	if index != -1:
+		advance_to_season(index as Season)
 	else:
 		push_error("No season: %s" % s)
 
