@@ -1,4 +1,4 @@
 # DateTime
-`v1.0`
+`v1.1`
 
 Requires Godot4.4dev+
