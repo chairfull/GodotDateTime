@@ -1,8 +1,6 @@
 @tool
-class_name DateTime
-extends Resource
-## Godot's built in Time class starts Months and Weekdays at 1, while this starts at 0.
-## So be careful combining the two.
+class_name DateTime extends Resource
+## WARNING: Godot's built in Time class starts Months and Weekdays at 1, while this starts at 0. So be careful combining the two.
 
 enum Weekday { SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY }
 enum Month { JANUARY, FEBRUARY, MARCH, APRIL, MAY, JUNE, JULY, AUGUST, SEPTEMBER, OCTOBER, NOVEMBER, DECEMBER }
@@ -12,15 +10,15 @@ enum Planet { SUN, MOON, MARS, MERCURY, JUPITER, VENUS, SATURN }
 enum Horoscope { ARIES, TAURUS, GEMINI, CANCER, LEO, VIRGO, LIBRA, SCORPIUS, SAGITARIUS, CAPRICORN, AQUARIUS, PISCES, OPHIUCHUS }
 enum Zodiac { RAT, OX, TIGER, RABBIT, DRAGON, SNAKE, HORSE, GOAT, MONKEY, ROOSTER, DOG, PIG }
 enum Relation { PAST, PRESENT, FUTURE }
-enum Epoch { SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR, DECADE, CENTURY }
+enum Epoch { MILLISECOND, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR, DECADE, CENTURY }
 enum Meridiem { AM, PM }
 
 const WEEKEND := [ Weekday.SATURDAY, Weekday.SUNDAY ]
 
 # These are the only true properties that should be serialized.
 # Everything else is a helper for these.
-# Though total_seconds is the smallest way to serialize.
-const PROPERTIES := [&"years", &"days", &"hours", &"minutes", &"seconds"]
+# Though total_milliseconds is the smallest way to serialize.
+const PROPERTIES := [ &"years", &"days", &"hours", &"minutes", &"seconds", &"milliseconds" ]
 
 const DAYS_IN_YEAR := 365
 const DAYS_IN_SEASON := 91
@@ -36,38 +34,46 @@ const SECONDS_IN_PERIOD := SECONDS_IN_HOUR * 4 # 14_400
 const SECONDS_IN_DAY := SECONDS_IN_MINUTE * MINUTES_IN_HOUR * HOURS_IN_DAY # 86_400
 const SECONDS_IN_WEEK := SECONDS_IN_DAY * DAYS_IN_WEEK # 604_800
 const SECONDS_IN_MONTH := SECONDS_IN_DAY * 30 # 2_592_000
-const SECONDS_IN_YEAR := SECONDS_IN_MINUTE * MINUTES_IN_HOUR * HOURS_IN_DAY * DAYS_IN_YEAR # 31_540_000
-const SECONDS_IN_DECADE := SECONDS_IN_YEAR * 10
-const SECONDS_IN_CENTURY := SECONDS_IN_YEAR * 100
+const SECONDS_IN_YEAR := SECONDS_IN_MINUTE * MINUTES_IN_HOUR * HOURS_IN_DAY * DAYS_IN_YEAR # 31_536_000
+const SECONDS_IN_DECADE := SECONDS_IN_YEAR * 10 # 315_360_000
+const SECONDS_IN_CENTURY := SECONDS_IN_YEAR * 100 # 3_153_600_000
+const MILLISECONDS_IN_SECOND := 1000
 
-const DAYS_IN_MONTH := [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-const DAYS_UNTIL_MONTH := [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+const DAYS_IN_MONTH := [ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ]
+const DAYS_UNTIL_MONTH := [ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 ]
 
-const EPOCH_SECONDS := {
-	Epoch.CENTURY: SECONDS_IN_CENTURY,
-	Epoch.DECADE: SECONDS_IN_DECADE,
-	Epoch.YEAR: SECONDS_IN_YEAR,
-	Epoch.MONTH: SECONDS_IN_MONTH,
-	Epoch.WEEK: SECONDS_IN_WEEK,
-	Epoch.DAY: SECONDS_IN_DAY,
-	Epoch.HOUR: SECONDS_IN_HOUR,
-	Epoch.MINUTE: SECONDS_IN_MINUTE,
-	Epoch.SECOND: 1,
+const EPOCH_MILLISECONDS := {
+	Epoch.CENTURY: SECONDS_IN_CENTURY * MILLISECONDS_IN_SECOND,
+	Epoch.DECADE: SECONDS_IN_DECADE * MILLISECONDS_IN_SECOND,
+	Epoch.YEAR: SECONDS_IN_YEAR * MILLISECONDS_IN_SECOND,
+	Epoch.MONTH: SECONDS_IN_MONTH * MILLISECONDS_IN_SECOND,
+	Epoch.WEEK: SECONDS_IN_WEEK * MILLISECONDS_IN_SECOND,
+	Epoch.DAY: SECONDS_IN_DAY * MILLISECONDS_IN_SECOND,
+	Epoch.HOUR: SECONDS_IN_HOUR * MILLISECONDS_IN_SECOND,
+	Epoch.MINUTE: SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND,
+	Epoch.SECOND: MILLISECONDS_IN_SECOND,
+	Epoch.MILLISECOND: 1
 }
 
 const HOROSCOPE_UNICODE := [0x2648, 0x2649, 0x264A, 0x264B, 0x264C, 0x264D, 0x264E, 0x264F, 0x2650, 0x2651, 0x2652, 0x2653, 0x26CE]
 const ANIMAL_UNICODE := ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
 const ANIMAL_EMOJI := "🐀🐂🐅🐇🐉🐍🐎🐐🐒🐓🐕🐖"
 
+## Used by init() or get_formatted()
+static var format_default := "%Y-%m-%d %H:%M (%a)"
+## Used when str(DateTime).
+static var format_datetime_str := "DateTime(yr:%years dy:%days hr:%hours mn:%minutes sc:%seconds ml:%milliseconds)"
+
 @export var years := 0: set=set_years
 @export_range(0, 365) var days := 0: set=set_days
 @export_range(0, 24) var hours := 0: set=set_hours
 @export_range(0, 60) var minutes := 0: set=set_minutes
 @export_range(0, 60) var seconds := 0: set=set_seconds
+@export_range(0, 1000) var milliseconds := 0: set=set_milliseconds
 
+var total_milliseconds: int: get=get_total_milliseconds, set=set_total_milliseconds
 var total_seconds: int: get=get_total_seconds, set=set_total_seconds
-## Ante meridiem. Post meridiem.
-var ampm: Meridiem: get=get_ampm, set=advance_to_ampm
+var ampm: Meridiem: get=get_ampm, set=advance_to_ampm ## Ante meridiem. Post meridiem.
 var daytime: bool: get=is_daytime, set=advance_to_daytime
 var nighttime: bool: get=is_nighttime, set=advance_to_nighttime
 var period_name: String: get=get_period_name, set=advance_to_period_named
@@ -88,18 +94,26 @@ var year: int: get=get_year, set=set_year
 func _init(input: Variant = null):
 	init(input)
 
-func init(input: Variant):
+func init(input: Variant = null):
 	match typeof(input):
+		TYPE_NIL:
+			pass
+		
 		TYPE_INT:
-			total_seconds = input
+			total_milliseconds = input
 		
 		TYPE_DICTIONARY:
 			for key in input:
-				self[key] = input[key]
+				if key in self:
+					self[key] = input[key]
+				else:
+					push_error("Unknown property '%s'." % [key])
 		
 		TYPE_OBJECT:
 			if input is DateTime:
 				copy(input)
+			else:
+				push_error("Can't init DateTime with object %s." % [input])
 		
 		TYPE_STRING_NAME:
 			if input in Season.keys():
@@ -115,6 +129,9 @@ func init(input: Variant):
 		
 		TYPE_STRING:
 			set_date(input)
+		
+		_:
+			push_error("Can't init DateTime with %s %s." % [type_string(typeof(input)), input])
 
 func set_years(y: int):
 	years = y
@@ -139,6 +156,13 @@ func set_minutes(m: int):
 	minutes = wrapi(m, 0, MINUTES_IN_HOUR)
 	if add_hours:
 		hours += add_hours
+	_flag_changed()
+
+func set_milliseconds(s: int):
+	var add_seconds := s / MILLISECONDS_IN_SECOND
+	milliseconds = wrapi(s, 0, MILLISECONDS_IN_SECOND)
+	if add_seconds:
+		seconds += add_seconds
 	_flag_changed()
 
 func set_seconds(s: int):
@@ -167,6 +191,14 @@ func reset():
 func copy(dt: DateTime):
 	for prop in PROPERTIES:
 		self[prop] = dt[prop]
+
+func get_total_milliseconds() -> int:
+	return get_total_seconds() * MILLISECONDS_IN_SECOND +\
+		milliseconds
+
+func set_total_milliseconds(s: int):
+	reset()
+	milliseconds = s
 
 func get_total_seconds() -> int:
 	return seconds +\
@@ -287,28 +319,35 @@ func get_weekday_name() -> String:
 	return Weekday.keys()[weekday]
 	
 func advance_to_weekday_named(wd: String):
-	var index := Weekday.keys().find(wd)
-	if index == -1:
-		push_error("No weekday: %s" % wd)
-	else:
-		advance_to_weekday(index as Weekday)
+	for key in Weekday.keys():
+		if wd.to_lower() == key or wd.to_lower().substr(0, 3) == key:
+			advance_to_weekday(Weekday[key])
+			return true
+	push_error("No weekday: %s." % wd)
 
 func get_weekday() -> Weekday:
+	# Sakamoto
+	var t := [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4]
+	var m := month-1
+	var yy := years
+	if m < 2:
+		yy -= 1
+	return (yy + int(yy/4) - int(yy/100) + int(yy/400) + t[m] + day_of_month) % 7
 	# Zeller's congruence.
-	var m := month - 1
-	var y := years
-	var d := day_of_month
-	
-	if m < 1:
-		m += 12
-		y -= 1
-	
-	var z = 13 * m - 1
-	z = int(z / 5)
-	z += d
-	z += y
-	z += int(y / 4)
-	return wrapi(z - 1, 0, 7)
+	#var m := month - 1
+	#var y := years
+	#var d := day_of_month
+	#
+	#if m < 1:
+		#m += 12
+		#y -= 1
+	#
+	#var z = 13 * m - 1
+	#z = int(z / 5)
+	#z += d
+	#z += y
+	#z += int(y / 4)
+	#return wrapi(z - 1, 0, 7)
 
 func advance_to_weekday(w: Weekday):
 	for i in len(Weekday):
@@ -501,29 +540,25 @@ func get_seconds_until_next_year() -> int:
 func advance_to_next_year():
 	seconds += get_seconds_until_next_year()
 
-# TODO:
-func format(f := "{year} {month_short_capitalized} {day_of_month_ordinal}") -> String:
-	return f.format(self)
-
 func difference(other: DateTime) -> DateTime:
-	return DateTime.new(abs(total_seconds - other.total_seconds))
+	return DateTime.new(abs(total_milliseconds - other.total_milliseconds))
 
 ## Does this occur at the same time?
 func is_now(other: DateTime) -> bool:
-	return total_seconds == other.total_seconds
+	return total_milliseconds == other.total_milliseconds
 
 ## Is this DateTime occuring before another?
 func is_before(other: DateTime) -> bool:
-	return total_seconds < other.total_seconds
+	return total_milliseconds < other.total_milliseconds
 
 ## Is this DateTime occuring after another?
 func is_after(other: DateTime) -> bool:
-	return total_seconds > other.total_seconds
+	return total_milliseconds > other.total_milliseconds
 
 ## Is other date in the past, future, or presenet.
 func get_relation(other: DateTime = create_from_current()) -> Relation:
-	var t1 := total_seconds
-	var t2 := other.total_seconds
+	var t1 := total_milliseconds
+	var t2 := other.total_milliseconds
 	if t1 > t2:
 		return Relation.PAST
 	elif t1 < t2:
@@ -545,8 +580,8 @@ func get_relation_difference_string(other: DateTime) -> String:
 
 ## Returns: [Relation, Maximum Epoch Type, Total of Maximum Epochs Type]
 func get_relation_difference(other: DateTime) -> Array:
-	var t1 := total_seconds
-	var t2 = other.total_seconds
+	var t1 := total_milliseconds
+	var t2 = other.total_milliseconds
 	
 	# Now?
 	if t1 == t2:
@@ -554,9 +589,9 @@ func get_relation_difference(other: DateTime) -> Array:
 	
 	var rel: Relation = Relation.PAST if t2 < t1 else Relation.FUTURE
 	var dif := absi(t1 - t2)
-	for k in EPOCH_SECONDS:
-		if dif >= EPOCH_SECONDS[k]:
-			return [rel, k, dif / EPOCH_SECONDS[k]]
+	for k in EPOCH_MILLISECONDS:
+		if dif >= EPOCH_MILLISECONDS[k]:
+			return [rel, k, dif / EPOCH_MILLISECONDS[k]]
 	
 	return []
 
@@ -589,8 +624,130 @@ func _advance(properties := {}):
 		self[prop] += properties[prop]
 
 func _to_string() -> String:
-	return "DateTime(years:%s, days:%s, hours:%s, minutes:%s, seconds:%s)" % [years, days, hours, minutes, seconds]
+	return format(format_datetime_str)
 
+#region Formatting
+func _tokenize_format(fmt: String) -> PackedStringArray:
+	var tokens: PackedStringArray
+	var i := 0
+	while i < fmt.length():
+		if fmt[i] == "%":
+			# Collect token until non-letter (or end)
+			var j := i + 1
+			while j < fmt.length() and fmt[j] in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_":
+				j += 1
+			tokens.append(fmt.substr(i, j - i)) # include '%'
+			i = j
+		else:
+			# Collect literal until next '%'
+			var j := i
+			while j < fmt.length() and fmt[j] != "%":
+				j += 1
+			tokens.append(fmt.substr(i, j - i))
+			i = j
+	return tokens
+
+func _get_format_parts(fmt: String, text: String) -> Dictionary:
+	var tokens := _tokenize_format(fmt)
+	var output := {}
+	var pos = 0
+	for i in tokens.size():
+		var tok = tokens[i]
+		if tok.begins_with("%"):
+			var key = tok.substr(1) # remove "%"
+			var next_literal = ""
+			if i+1 < tokens.size() and not tokens[i+1].begins_with("%"):
+				next_literal = tokens[i+1]
+			var end = text.length() if next_literal == "" else text.find(next_literal, pos)
+			if end == -1:
+				push_error("Format mismatch at " + key)
+				return {}
+			output[key] = _from_format(key, text.substr(pos, end - pos))
+			pos = end
+		else:
+			if not text.substr(pos, tok.length()) == tok:
+				push_error("Literal mismatch: " + tok)
+				return {}
+			pos += tok.length()
+	return output
+
+func format(input: String = "%c") -> String:
+	var i := 0
+	var output := ""
+	while i < input.length():
+		if input[i] == "%":
+			var j := i+1
+			var tag := ""
+			while j < input.length() and input[j].to_lower() in "_abcdefghijklmnopqrstuvwxyz":
+				tag += input[j]
+				j += 1
+			output += _to_format(tag)
+			i = j
+		else:
+			output += input[i]
+			i += 1
+	return output
+
+func _to_format(code: String) -> String:
+	match code:
+		"Y": return "%04d" % year # Year with century.
+		"y": return "%02d" % (year % 100) # Year without century (00-99).
+		"m": return "%02d" % (month + 1) # Month as a zero-padded number (01-12).
+		"B": return month_name # Full month name.
+		"b": return month_name.substr(0, 3) # Abbreviated month name.
+		"d": return "%02d" % day_of_month # Day of the month as a zero-padded number (01-31).
+		"A": return weekday_name # Full weekday name.
+		"a": return weekday_name.substr(0, 3) # Abbreviated weekday name.
+		"w": return str(weekday) # Weekday as a number (0-6, Sunday is 0).
+		"H": return "%02d" % hours # Hour (24-hour clock) as a zero-padded number (00-23).
+		"I": # Hour (12-hour clock) as a zero-padded number (01-12).
+			var h12 = hours % 12
+			if h12 == 0: h12 = 12
+			return "%02d" % h12
+		"p": return str(get_ampm()) # AM or PM.
+		"M": return "%02d" % minutes # Minute as a zero-padded number (00-59).
+		"S": return "%02d" % seconds # Second as a zero-padded number (00-59).
+		#"f": return "%03d" % microseconds # TODO: Microseconds. Use %06d for microseconds.
+		"j": return "%03d" % (days + 1) # Day of the year (001-366).
+		"U": return "??_U" # TODO: Week number of the year (Sunday as the first day).
+		"W": return "??_W" # TODO: Week number of the year (Monday as the first day).
+		"c": return format("%a %b %d %H:%M:%S %Y") # Locale's appropriate date and time.
+		"x": return format("%m/%d/%y") # Locale's date representation.
+		"X": return format("%H:%M:%S") # Locale's time representation.
+		"%": return "%" # A literal '%' character.
+		_: return str(self[code]) if code in self else ("%" + code)
+
+func _from_format(code: String, token: String) -> Variant:
+	match code:
+		"Y": return int(token) # Year with century.
+		"y":  # Year without century (00-99).
+			var yy = int(token)
+			return (2000 + yy) if yy < 70 else (1900 + yy) # python-like cutoff
+		"m": return int(token) - 1  # Month as a zero-padded number (01-12).
+		"B": return token # Full month name.
+		"b": return token # Abbreviated month name.
+		"d": return int(token) # Day of the month as a zero-padded number (01-31).
+		"A": return token # Full weekday name.
+		"a": return token # Abbreviated weekday name.
+		"w": return int(token) # Weekday as a number (0-6, Sunday is 0).
+		"H": return int(token) # Hour (24-hour clock) as a zero-padded number (00-23).
+		"I": return int(token) % 12  # Hour (12-hour clock) as a zero-padded number (01-12).
+		"p": return token # AM or PM.
+		"M": return int(token) # Minute as a zero-padded number (00-59).
+		"S": return int(token) # Second as a zero-padded number (00-59).
+		#"f": milliseconds = int(token) # TODO
+		"j": return int(token) - 1 # Day of the year (001-366).
+		#"U": return int(token), 0) # TODO: Sunday-start weeks
+		#"W": return int(token), 1) # TODO: Monday-start weeks
+		#"c": parse("%a %b %d %H:%M:%S %Y", token) # TODO: Locale's appropriate date and time.
+		#"x": parse("%m/%d/%y", token) # TODO: Locale's date representation.
+		#"X": parse("%H:%M:%S", token) # TODO: Locale's time representation.
+		"%": return token # A literal '%' character.
+		_: return convert(token, typeof(self[code])) if code in self else token
+
+#endregion
+
+## Can handle full "January" or first 3 letters "Jan".
 static func get_month_from_str(mon: String) -> Month:
 	for i in 12:
 		var mname: String = Month.keys()[i].to_lower()
@@ -626,7 +783,7 @@ static func create_from_datetime(d: Dictionary) -> DateTime:
 	out.seconds = d.second
 	return out
 
-static func sort(list: Array, obj_property := "datetime", reverse := false, sort_on := "total_seconds"):
+static func sort(list: Array, obj_property := "datetime", reverse := false, sort_on := "total_milliseconds"):
 	if reverse:
 		list.sort_custom(func(a, b): return a[obj_property][sort_on] > b[obj_property][sort_on])
 	else:
