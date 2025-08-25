@@ -17,7 +17,7 @@ const WEEKEND := [ Weekday.SATURDAY, Weekday.SUNDAY ]
 
 # These are the only true properties that should be serialized.
 # Everything else is a helper for these.
-# Though total_milliseconds is the smallest way to serialize.
+# total_milliseconds is the best property to serialize.
 const PROPERTIES := [ &"years", &"days", &"hours", &"minutes", &"seconds", &"milliseconds" ]
 
 const DAYS_IN_YEAR := 365
@@ -60,9 +60,11 @@ const ANIMAL_UNICODE := ["子", "丑", "寅", "卯", "辰", "巳", "午", "未",
 const ANIMAL_EMOJI := "🐀🐂🐅🐇🐉🐍🐎🐐🐒🐓🐕🐖"
 
 ## Used by init() or get_formatted()
-static var format_default := "%Y-%m-%d %H:%M (%a)"
+static var format_default := "%day_of_month_ordinal %month_name (%weekday_name), %year"
 ## Used when str(DateTime).
 static var format_datetime_str := "DateTime(yr:%years dy:%days hr:%hours mn:%minutes sc:%seconds ml:%milliseconds)"
+## An output with bbcode.
+static var format_datetime_richstr := ""
 
 @export var years := 0: set=set_years
 @export_range(0, 365) var days := 0: set=set_days
@@ -94,7 +96,7 @@ var year: int: get=get_year, set=set_year
 func _init(input: Variant = null):
 	init(input)
 
-func init(input: Variant = null):
+func init(input: Variant):
 	match typeof(input):
 		TYPE_NIL:
 			pass
@@ -103,11 +105,7 @@ func init(input: Variant = null):
 			total_milliseconds = input
 		
 		TYPE_DICTIONARY:
-			for key in input:
-				if key in self:
-					self[key] = input[key]
-				else:
-					push_error("Unknown property '%s'." % [key])
+			set_from_dict(input)
 		
 		TYPE_OBJECT:
 			if input is DateTime:
@@ -135,54 +133,42 @@ func init(input: Variant = null):
 
 func set_years(y: int):
 	years = y
-	_flag_changed()
+	changed.emit()
 
 func set_days(d: int):
 	var add_years := d / DAYS_IN_YEAR
 	days = wrapi(d, 0, DAYS_IN_YEAR)
 	if add_years:
 		years += add_years
-	_flag_changed()
+	changed.emit()
 
 func set_hours(h: int):
 	var add_days := h / HOURS_IN_DAY
 	hours = wrapi(h, 0, HOURS_IN_DAY)
 	if add_days:
 		days += add_days
-	_flag_changed()
+	changed.emit()
 
 func set_minutes(m: int):
 	var add_hours := m / MINUTES_IN_HOUR
 	minutes = wrapi(m, 0, MINUTES_IN_HOUR)
 	if add_hours:
 		hours += add_hours
-	_flag_changed()
-
-func set_milliseconds(s: int):
-	var add_seconds := s / MILLISECONDS_IN_SECOND
-	milliseconds = wrapi(s, 0, MILLISECONDS_IN_SECOND)
-	if add_seconds:
-		seconds += add_seconds
-	_flag_changed()
+	changed.emit()
 
 func set_seconds(s: int):
 	var add_minutes := s / SECONDS_IN_MINUTE
 	seconds = wrapi(s, 0, SECONDS_IN_MINUTE)
 	if add_minutes:
 		minutes += add_minutes
-	_flag_changed()
+	changed.emit()
 
-## Trick to prevent multiple calls to the signal.
-func _flag_changed():
-	if not has_meta(&"changed"):
-		set_meta(&"changed", true)
-		_changed.call_deferred()
-		changed.emit.call_deferred()
-		remove_meta.call_deferred(&"changed")
-
-## Will only be called once at the end of the tick.
-func _changed():
-	pass
+func set_milliseconds(s: int):
+	var add_seconds := s / MILLISECONDS_IN_SECOND
+	milliseconds = wrapi(s, 0, MILLISECONDS_IN_SECOND)
+	if add_seconds:
+		seconds += add_seconds
+	changed.emit()
 
 func reset():
 	for prop in PROPERTIES:
@@ -391,11 +377,11 @@ func get_month_name() -> String:
 	return Month.keys()[month]
 
 func advance_to_month_named(m: String):
-	var index = get_month_from_str(m)
-	if index == -1:
-		push_error("No month: %s." % m)
-	else:
-		advance_to_month(index as Month)
+	for mname in Month.keys():
+		if mname.to_lower() == m.to_lower() or mname.to_lower().substr(0, 3) == m.to_lower():
+			advance_to_month(Month[mname])
+			return
+	push_error("No month: %s." % m)
 
 func get_month() -> Month:
 	for i in range(11, -1, -1):
@@ -431,9 +417,11 @@ func get_months_until(other: DateTime) -> int:
 			break
 	return m
 
+# TODO: Remove and just use format()
 func get_date() -> String:
-	return "%s %s" % [month, day_of_month]
-	
+	return "%s %s" % [month_name.capitalize(), day_of_month]
+
+# TODO: Remove and just use format()
 func set_date(s: String):
 	var p := s.split(" ", false)
 	# First part is month.
@@ -618,37 +606,86 @@ func get_zodiac_unicode() -> String:
 func get_zodiac_emoji() -> String:
 	return ANIMAL_EMOJI[get_zodiac()]
 
-## Advance any number of properties by an amount.
-func _advance(properties := {}):
-	for prop in properties:
-		self[prop] += properties[prop]
+## Safely advances any number of properties by modifying from highest # seconds to lowest.
+func advance(dict := {}):
+	var list := get_property_list()
+	var modified: PackedStringArray
+	for i in range(list.size()-1, -1, -1):
+		var prop: Dictionary = list[i]
+		if prop.name in dict and prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			if prop.type == TYPE_INT:
+				self[prop.name] += dict[prop.name]
+			elif prop.type == TYPE_STRING:
+				self[prop.name] = dict[prop.name]
+			modified.append(prop.name)
+	for key in dict:
+		if not key in modified:
+			push_error("DateTime has no \"%s\". Couldn't set to %s." % [key, dict[key]])
+
+## Safely sets any number of properties by modifying from highest # of seconds to lowest.
+func set_from_dict(dict: Dictionary):
+	var list := get_property_list()
+	var modified: PackedStringArray
+	for i in range(list.size()-1, -1, -1):
+		var prop: Dictionary = list[i]
+		if prop.name in dict and prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			self[prop.name] = dict[prop.name]
+			modified.append(prop.name)
+	for key in dict:
+		if not key in modified:
+			push_error("DateTime has no \"%s\". Couldn't set to %s." % [key, dict[key]])
 
 func _to_string() -> String:
 	return format(format_datetime_str)
 
+func to_richstring() -> String:
+	return format(format_datetime_richstr)
+
 #region Formatting
-func _tokenize_format(fmt: String) -> PackedStringArray:
+
+func format(format_str: String = format_default) -> String:
+	var i := 0
+	var output := ""
+	while i < format_str.length():
+		if format_str[i] == "%":
+			var j := i+1
+			var tag := ""
+			while j < format_str.length() and format_str[j].to_lower() in "_abcdefghijklmnopqrstuvwxyz":
+				tag += format_str[j]
+				j += 1
+			output += _to_format(tag)
+			i = j
+		else:
+			output += format_str[i]
+			i += 1
+	return output
+
+func set_from_format(dt_str: String, format_str: String = format_default):
+	var properties := _get_format_parts(dt_str, format_str)
+	set_from_dict(properties)
+
+func _tokenize_format(format_str: String) -> PackedStringArray:
 	var tokens: PackedStringArray
 	var i := 0
-	while i < fmt.length():
-		if fmt[i] == "%":
+	while i < format_str.length():
+		if format_str[i] == "%":
 			# Collect token until non-letter (or end)
 			var j := i + 1
-			while j < fmt.length() and fmt[j] in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_":
+			while j < format_str.length() and format_str[j].to_lower() in "abcdefghijklmnopqrstuvwxyz_":
 				j += 1
-			tokens.append(fmt.substr(i, j - i)) # include '%'
+			tokens.append(format_str.substr(i, j - i)) # include '%'
 			i = j
 		else:
 			# Collect literal until next '%'
 			var j := i
-			while j < fmt.length() and fmt[j] != "%":
+			while j < format_str.length() and format_str[j] != "%":
 				j += 1
-			tokens.append(fmt.substr(i, j - i))
+			tokens.append(format_str.substr(i, j - i))
 			i = j
 	return tokens
 
-func _get_format_parts(fmt: String, text: String) -> Dictionary:
-	var tokens := _tokenize_format(fmt)
+func _get_format_parts(text: String, format_str: String) -> Dictionary:
+	var tokens := _tokenize_format(format_str)
 	var output := {}
 	var pos = 0
 	for i in tokens.size():
@@ -671,33 +708,16 @@ func _get_format_parts(fmt: String, text: String) -> Dictionary:
 			pos += tok.length()
 	return output
 
-func format(input: String = "%c") -> String:
-	var i := 0
-	var output := ""
-	while i < input.length():
-		if input[i] == "%":
-			var j := i+1
-			var tag := ""
-			while j < input.length() and input[j].to_lower() in "_abcdefghijklmnopqrstuvwxyz":
-				tag += input[j]
-				j += 1
-			output += _to_format(tag)
-			i = j
-		else:
-			output += input[i]
-			i += 1
-	return output
-
 func _to_format(code: String) -> String:
 	match code:
 		"Y": return "%04d" % year # Year with century.
 		"y": return "%02d" % (year % 100) # Year without century (00-99).
 		"m": return "%02d" % (month + 1) # Month as a zero-padded number (01-12).
-		"B": return month_name # Full month name.
-		"b": return month_name.substr(0, 3) # Abbreviated month name.
+		"B": return month_name.capitalize() # Full month name.
+		"b": return month_name.substr(0, 3).capitalize() # Abbreviated month name.
 		"d": return "%02d" % day_of_month # Day of the month as a zero-padded number (01-31).
-		"A": return weekday_name # Full weekday name.
-		"a": return weekday_name.substr(0, 3) # Abbreviated weekday name.
+		"A": return weekday_name.capitalize() # Full weekday name.
+		"a": return weekday_name.substr(0, 3).capitalize() # Abbreviated weekday name.
 		"w": return str(weekday) # Weekday as a number (0-6, Sunday is 0).
 		"H": return "%02d" % hours # Hour (24-hour clock) as a zero-padded number (00-23).
 		"I": # Hour (12-hour clock) as a zero-padded number (01-12).
@@ -748,13 +768,13 @@ func _from_format(code: String, token: String) -> Variant:
 #endregion
 
 ## Can handle full "January" or first 3 letters "Jan".
-static func get_month_from_str(mon: String) -> Month:
-	for i in 12:
-		var mname: String = Month.keys()[i].to_lower()
-		if mon.to_lower() == mname or mon.to_lower() == mname.substr(0, 3):
-			return Month.values()[i]
-	push_error("Can't find month %s." % [mon])
-	return Month.JANUARY
+#static func get_month_from_str(mon: String) -> Month:
+	#for i in 12:
+		#var mname: String = Month.keys()[i].to_lower()
+		#if mon.to_lower() == mname or mon.to_lower() == mname.substr(0, 3):
+			#return Month.values()[i]
+	#push_error("Can't find month %s." % [mon])
+	#return Month.JANUARY
 
 static func _is_leap_year(y: int) -> bool:
 	return y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)
