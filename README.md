@@ -50,11 +50,13 @@ I can't remember all the features as this class was written over a number of yea
 ## Setup
 Currently `DateTime` can be initialised with:
 
-- `int`: Total milliseconds. `DateTime.new(Time.get_unix_time_from_system())`
 - `Dictionary`: Properties. `DateTime.new({ month_name="December", day_of_month=25, year=1991 })`
-- `StringName`: [enum](#enum-overview). `DateTime.new(&"JANUARY")`
 - `String`: [formatted](#formatting) string. `DateTime.new("Dec 25th 1991 10:30PM")` (See `DateTime.format_default`)
+- `int`: Total milliseconds. `DateTime.new(Time.get_ticks_msec())`
+- `float`: Assumes Unix time. `DateTime.new(Time.get_unix_time_from_system())`
+- `StringName`: [enum](#enum-overview). `DateTime.new(&"JANUARY")`
 - `DateTime`: Properties to copy. `DateTime.new(character.birthday)`
+- Nothing: Will just be `{years:0, days:0, hours:0, minutes:0, seconds:0, milliseconds: 0}`
 
 ## Formatting
 These are `static var`s that can be overriden.
@@ -106,6 +108,9 @@ enum Relation { PAST, PRESENT, FUTURE }
 enum Epoch { MILLISECOND, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR, DECADE, CENTURY }
 enum Meridiem { AM, PM }
 ```
+
+## Saving
+While you can use `to_dir()` to get a dictionary, `get_total_milliseconds()` is probably the smallest for storage.
 
 ## DateTimeline
 Meant as a calendar event system: You add events, advance time, and events fire as you go.

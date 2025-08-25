@@ -104,6 +104,10 @@ func init(input: Variant):
 		TYPE_INT:
 			total_milliseconds = input
 		
+		TYPE_FLOAT:
+			push_warning("DateTime initialised with a float. Assuming Unix time.")
+			set_from_unix_time(input)
+		
 		TYPE_DICTIONARY:
 			set_from_dict(input)
 		
@@ -622,6 +626,13 @@ func advance(dict := {}):
 		if not key in modified:
 			push_error("DateTime has no \"%s\". Couldn't set to %s." % [key, dict[key]])
 
+func set_from_unix_time(u_secs: float):
+	var secs := int(floor(u_secs))
+	var ms   := int(round((u_secs - float(secs)) * 1000.0))
+	var d := Time.get_datetime_dict_from_unix_time(secs)
+	copy(DateTime.create_from_datetime(d))
+	milliseconds += ms
+
 ## Safely sets any number of properties by modifying from highest # of seconds to lowest.
 func set_from_dict(dict: Dictionary):
 	var list := get_property_list()
@@ -640,6 +651,12 @@ func _to_string() -> String:
 
 func to_richstring() -> String:
 	return format(format_datetime_richstr)
+
+func to_dict() -> Dictionary[StringName, int]:
+	var out: Dictionary[StringName, int]
+	for prop in PROPERTIES:
+		out[prop] = self[prop]
+	return out
 
 #region Formatting
 
