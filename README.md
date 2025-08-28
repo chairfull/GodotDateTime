@@ -126,7 +126,7 @@ Meant as a calendar event system: You add events, advance time, and events fire 
 
 `add_event` assumes time is relative to `future`. Call `add_event({}, evnt, false)` if you want it relative to the initialisation time.
 
-```
+```gdscript
 # Create timeline.
 var dt := DateTimeline.new({ year=1989, month_name="oct" })
 
