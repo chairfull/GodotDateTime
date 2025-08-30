@@ -548,7 +548,7 @@ func is_after(other: DateTime) -> bool:
 	return total_milliseconds > other.total_milliseconds
 
 ## Is other date in the past, future, or presenet.
-func get_relation(other: DateTime = create_from_current()) -> Relation:
+func get_relation(other: DateTime = create_from_system()) -> Relation:
 	var t1 := total_milliseconds
 	var t2 := other.total_milliseconds
 	if t1 > t2:
@@ -802,7 +802,7 @@ static func _days_until_month(y: int, m: int) -> int:
 static func _days_in_month(y: int, m: int) -> int:
 	return 29 if m == Month.FEBRUARY and _is_leap_year(y) else DAYS_IN_MONTH[m]
 
-static func create_from_current() -> DateTime:
+static func create_from_system() -> DateTime:
 	return create_from_datetime(Time.get_datetime_dict_from_system())
 
 static func create_from_datetime(d: Dictionary) -> DateTime:
@@ -811,7 +811,6 @@ static func create_from_datetime(d: Dictionary) -> DateTime:
 	if "dst" in d and d.dst:
 		var tz = Time.get_time_zone_from_system()
 		d.minute = wrapi(d.minute + tz.bias, 0, MINUTES_IN_HOUR)
-	
 	var out := DateTime.new()
 	out.years = d.year
 	out.days = d.day
@@ -820,7 +819,7 @@ static func create_from_datetime(d: Dictionary) -> DateTime:
 	out.seconds = d.second
 	return out
 
-static func sort(list: Array, obj_property := "datetime", reverse := false, sort_on := "total_milliseconds"):
+static func sort(list: Array[Array], obj_property := "datetime", reverse := false, sort_on := "total_milliseconds"):
 	if reverse:
 		list.sort_custom(func(a, b): return a[obj_property][sort_on] > b[obj_property][sort_on])
 	else:

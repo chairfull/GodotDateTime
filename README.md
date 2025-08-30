@@ -1,5 +1,5 @@
 # DateTime
-`v1.2` Godot4.5dev+
+`v1.2.1` Godot4.5dev+
 
 `DateTime` and [`DateTimeline`](#datetimeline)
 
@@ -26,7 +26,7 @@ I can't remember all the features as this class was written over a number of yea
 	- `advance_to_next_minute()`
 	- `advance_to_next_hour()`
 	- `advance_to_period(Period)` `advance_to_next_period()`
-	- `advance_to_weekday(Weekday)` `advance_to_next_day()` `advance_to_next_week()`
+	- `advance_to_weekday(Weekday)` `advance_to_next_day()` `advance_to_next_week()` `advance_to_weekday_named(name)`
 	- `advance_to_month(Month)` `advance_to_next_month()`
 	- `advance_to_season(Season)` `advance_to_next_season()`
 	- `advance_to_next_year()`
@@ -46,6 +46,22 @@ I can't remember all the features as this class was written over a number of yea
 	- `get_zodiac_name()`
 	- `get_zodiac_unicode()`
 	- `get_zodiac_emoji()`
+- Static functions:
+	- `create_from_system()` Creates a `DateTime` using `Time.get_datetime_dict_from_system()`.
+	- `sort(list, property, subproperty)` Sorts an array of Objects with a `datetime` field by `total_milliseconds`.
+	- `ordinal(number)` 1, 2, 3 -> 1st, 2nd, 3rd...
+- Relations:
+	- `is_now(dt)` `is_before(dt)` `is_after(dt)` compares self with another `DateTime`.
+	- `get_relation(dt)` returns enum `Relation.BEFORE` `Relation.NOW` `Relation.AFTER`.
+	- `get_relation_difference_string(dt)` returns a string like "5 minutes ago" or "in 10 days".
+	- `get_relation_difference(dt)` returns `[Relation:enum, MaximumEpochType:enum, TotalEpochs:int]`
+		- `Epoch { MILLISECOND, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR, DECADE, CENTURY }`
+	- `difference(dt)` returns a `DateTime` equal to `abs(a.total_seconds - b.total_seconds)`.
+- Deltas: (Useful for animating time of day?)
+	- `get_day_delta()` float from 0.0-1.0 representing the percentage of day completion.
+	- `get_year_delta()` from from 0.0-1.0 representing the percentage of year completion.
+- Misc:
+	- `get_weekday_planet()` I don't know why this was even added.
 
 ## Setup
 Currently `DateTime` can be initialised with:
@@ -166,6 +182,9 @@ signal hour_started(hour: int)
 ```
 
 # Changes
+- 1.2.1
+	- Documented some more features.
+	- Changed `create_from_current()` to `create_from_system()`.
 - 1.2
 	- Added `milliseconds` property.
 	- `get_weekday()` swapped to Sakamoto from Zeller.
