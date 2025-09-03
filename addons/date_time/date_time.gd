@@ -807,7 +807,6 @@ static func create_from_system() -> DateTime:
 
 static func create_from_datetime(d: Dictionary) -> DateTime:
 	d.day = d.day - 1 + _days_until_month(d.year, d.month - 1)
-	d.hour -= 1
 	if "dst" in d and d.dst:
 		var tz = Time.get_time_zone_from_system()
 		d.minute = wrapi(d.minute + tz.bias, 0, MINUTES_IN_HOUR)

@@ -186,6 +186,7 @@ signal hour_started(hour: int)
 # Changes
 - 1.2.2
 	- Fixed off-by-one in the `get_weekday()`.
+	- Fixed off-by-one in the `create_from_datetime()`.
 - 1.2.1
 	- Documented some more features.
 	- Changed `create_from_current()` to `create_from_system()`.
