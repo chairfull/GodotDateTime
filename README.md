@@ -1,5 +1,5 @@
 # DateTime
-`v1.2.1` Godot4.5dev+
+`v1.2.2` Godot4.5dev+
 
 `DateTime` and [`DateTimeline`](#datetimeline)
 
@@ -73,6 +73,8 @@ Currently `DateTime` can be initialised with:
 - `StringName`: [enum](#enum-overview). `DateTime.new(&"JANUARY")`
 - `DateTime`: Properties to copy. `DateTime.new(character.birthday)`
 - Nothing: Will just be `{years:0, days:0, hours:0, minutes:0, seconds:0, milliseconds: 0}`
+
+Alternatively call `DateTime.create_from_system()` for one that implements `Time.get_datetime_from_system()`.
 
 ## Formatting
 These are `static var`s that can be overriden.
@@ -182,6 +184,8 @@ signal hour_started(hour: int)
 ```
 
 # Changes
+- 1.2.2
+	- Fixed off-by-one in the `get_weekday()`.
 - 1.2.1
 	- Documented some more features.
 	- Changed `create_from_current()` to `create_from_system()`.

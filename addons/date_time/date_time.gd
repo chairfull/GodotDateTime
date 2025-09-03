@@ -318,11 +318,11 @@ func advance_to_weekday_named(wd: String):
 func get_weekday() -> Weekday:
 	# Sakamoto
 	var t := [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4]
-	var m := month-1
-	var yy := years
+	var m := month
+	var y := years
 	if m < 2:
-		yy -= 1
-	return (yy + int(yy/4) - int(yy/100) + int(yy/400) + t[m] + day_of_month) % 7
+		y -= 1
+	return (y + int(y/4) - int(y/100) + int(y/400) + t[m] + day_of_month) % 7
 	# Zeller's congruence.
 	#var m := month - 1
 	#var y := years
