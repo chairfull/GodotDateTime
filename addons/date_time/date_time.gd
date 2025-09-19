@@ -395,12 +395,10 @@ func get_month() -> Month:
 
 ## Advance to the start of the next month.
 func advance_to_month(m: Month):
-	var d := day_of_month
 	for i in 12:
 		if month == m:
 			break
 		advance_to_next_month()
-	day_of_month = d
 
 func advance_to_next_month():
 	seconds += get_seconds_until_next_month()
@@ -619,9 +617,10 @@ func advance(dict := {}):
 		if prop.name in dict and prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
 			if prop.type == TYPE_INT:
 				self[prop.name] += dict[prop.name]
+				modified.append(prop.name)
 			elif prop.type == TYPE_STRING:
 				self[prop.name] = dict[prop.name]
-			modified.append(prop.name)
+				modified.append(prop.name)
 	for key in dict:
 		if not key in modified:
 			push_error("DateTime has no \"%s\". Couldn't set to %s." % [key, dict[key]])

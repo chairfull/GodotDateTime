@@ -102,8 +102,8 @@ func has_events() -> bool:
 ## Must occur in the future.
 func add_event(future_date: Dictionary, event: Variant, relative := true):
 	var base_time := future.total_milliseconds if relative else _start_date
-	var next_time := DateTime.new(future_date).total_milliseconds
-	var event_dt := DateTime.new(base_time + next_time)
+	var event_dt := DateTime.new(base_time)
+	event_dt.advance(future_date)
 	
 	if event_dt.get_total_milliseconds() < future.get_total_milliseconds():
 		push_error("Can't add events in the past. Event (%s) wasn't added." % [event])
