@@ -230,6 +230,7 @@ func get_ampm() -> Meridiem:
 	return Meridiem.AM if hours < 12 else Meridiem.PM
 
 func advance_to_ampm(m: Meridiem):
+	assert(m in Meridiem.keys(), "Meridiem must be 0 or 1.")
 	while ampm != m:
 		advance_to_next_hour()
 
@@ -334,6 +335,7 @@ func get_weekday() -> Weekday:
 	#return wrapi(z - 1, 0, 7)
 
 func advance_to_weekday(w: Weekday):
+	assert(w in Weekday.keys(), "Weekday must be between 0-6.")
 	while weekday != w:
 		advance_to_next_day()
 
@@ -374,7 +376,8 @@ func get_month_name() -> String:
 
 ## Advance to the start of the next month.
 func advance_to_month(m: Month):
-	while not month == m:
+	assert(m in Month.keys(), "Month must be between 0-11.")
+	while month != m:
 		advance_to_next_month()
 
 func advance_to_month_named(m: String):
@@ -402,12 +405,9 @@ func get_seconds_until_next_month() -> int:
 func get_months_until(other: DateTime) -> int:
 	var dummy: DateTime = duplicate()
 	var m := 0
-	for i in 12:
-		if dummy.month != other.month:
-			m += 1
-			dummy.next_month()
-		else:
-			break
+	while dummy.month != other.month:
+		m += 1
+		dummy.advance_to_next_month()
 	return m
 
 # TODO: Remove and just use format()
