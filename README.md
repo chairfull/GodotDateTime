@@ -1,5 +1,5 @@
 # DateTime
-`v1.2.3` Godot4.5dev+
+`v1.2.4` Godot4.5dev+
 
 `DateTime` and [`DateTimeline`](#datetimeline)
 
@@ -184,6 +184,8 @@ signal hour_started(hour: int)
 ```
 
 # Changes
+- 1.2.4
+	- Fixed `get_seconds_until_next_month()` not accounting for time in the current day.
 - 1.2.3
 	- Fixed `advance_to_month` setting the date wrong. Now months should start at day 0.
 	- Fixed `DateTimeline.add_event` not setting dates relatively.

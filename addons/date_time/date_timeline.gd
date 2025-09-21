@@ -86,7 +86,7 @@ func catch_up():
 		if stop_on_event and did_event:
 			break
 	
-	print("Loops: ", loops)
+	#print("Loops: ", loops)
 	
 	if stop_on_event and did_event:
 		pass

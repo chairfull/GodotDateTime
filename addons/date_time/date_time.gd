@@ -230,9 +230,8 @@ func get_ampm() -> Meridiem:
 	return Meridiem.AM if hours < 12 else Meridiem.PM
 
 func advance_to_ampm(m: Meridiem):
-	for i in 12:
-		if ampm != m:
-			advance_to_next_hour()
+	while ampm != m:
+		advance_to_next_hour()
 
 func is_am() -> bool:
 	return ampm == Meridiem.AM
@@ -244,11 +243,8 @@ func is_daytime() -> bool:
 	return hours >= 5 and hours <= 16
 
 func advance_to_daytime(dt: bool = true):
-	for i in 12:
-		if daytime != dt:
-			advance_to_next_hour()
-		else:
-			break
+	while daytime != dt:
+		advance_to_next_hour()
 
 func is_nighttime() -> bool:
 	return not is_daytime()
@@ -265,9 +261,7 @@ func is_weekend() -> bool:
 
 ## False will advance to monday.
 func advance_to_weekend(w := true):
-	for i in 12:
-		if weekend == w:
-			break
+	while weekend != w:
 		advance_to_next_day()
 
 func get_total_days() -> int:
@@ -340,9 +334,7 @@ func get_weekday() -> Weekday:
 	#return wrapi(z - 1, 0, 7)
 
 func advance_to_weekday(w: Weekday):
-	for i in len(Weekday):
-		if weekday == w:
-			break
+	while weekday != w:
 		advance_to_next_day()
 
 ## Advance to the start of the next week.
@@ -380,6 +372,11 @@ func set_months(m):
 func get_month_name() -> String:
 	return Month.keys()[month]
 
+## Advance to the start of the next month.
+func advance_to_month(m: Month):
+	while not month == m:
+		advance_to_next_month()
+
 func advance_to_month_named(m: String):
 	for mname in Month.keys():
 		if mname.to_lower() == m.to_lower() or mname.to_lower().substr(0, 3) == m.to_lower():
@@ -393,20 +390,14 @@ func get_month() -> Month:
 			return i
 	return -1
 
-## Advance to the start of the next month.
-func advance_to_month(m: Month):
-	for i in 12:
-		if month == m:
-			break
-		advance_to_next_month()
-
 func advance_to_next_month():
 	seconds += get_seconds_until_next_month()
 
 func get_seconds_until_next_month() -> int:
-	var m: int = month
-	var days_until := DAYS_IN_YEAR if m == Month.DECEMBER else _days_until_month(years, m+1)
-	return (days_until - days) * SECONDS_IN_DAY
+	var days_until := DAYS_IN_YEAR if month == Month.DECEMBER else _days_until_month(years, month + 1)
+	var full_days_left := days_until - days - 1
+	var seconds_today_left := SECONDS_IN_DAY - (hours * SECONDS_IN_HOUR + minutes * SECONDS_IN_MINUTE + seconds)
+	return full_days_left * SECONDS_IN_DAY + seconds_today_left
 
 func get_months_until(other: DateTime) -> int:
 	var dummy: DateTime = duplicate()
