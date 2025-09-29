@@ -1,6 +1,7 @@
 @tool
 class_name DateTime extends Resource
 ## WARNING: Godot's built in Time class starts Months and Weekdays at 1, while this starts at 0. So be careful combining the two.
+## Originally designed with seconds as smallest epoch, but then converted to use milliseconds, so some things need reworking.
 
 enum Weekday { SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY }
 enum Month { JANUARY, FEBRUARY, MARCH, APRIL, MAY, JUNE, JULY, AUGUST, SEPTEMBER, OCTOBER, NOVEMBER, DECEMBER }
@@ -230,7 +231,8 @@ func get_ampm() -> Meridiem:
 	return Meridiem.AM if hours < 12 else Meridiem.PM
 
 func advance_to_ampm(m: Meridiem):
-	assert(m in Meridiem.keys(), "Meridiem must be 0 or 1.")
+	assert(m in Meridiem.values(), "Meridiem must be 0 or 1. Was %s." % m)
+	advance_to_next_hour()
 	while ampm != m:
 		advance_to_next_hour()
 
@@ -244,6 +246,7 @@ func is_daytime() -> bool:
 	return hours >= 5 and hours <= 16
 
 func advance_to_daytime(dt: bool = true):
+	advance_to_next_hour()
 	while daytime != dt:
 		advance_to_next_hour()
 
@@ -262,6 +265,7 @@ func is_weekend() -> bool:
 
 ## False will advance to monday.
 func advance_to_weekend(w := true):
+	advance_to_next_day()
 	while weekend != w:
 		advance_to_next_day()
 
@@ -312,7 +316,7 @@ func advance_to_weekday_named(wd: String):
 
 func get_weekday() -> Weekday:
 	# Sakamoto
-	var t := [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4]
+	const t := [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4]
 	var m := month
 	var y := years
 	if m < 2:
@@ -335,7 +339,8 @@ func get_weekday() -> Weekday:
 	#return wrapi(z - 1, 0, 7)
 
 func advance_to_weekday(w: Weekday):
-	assert(w in Weekday.keys(), "Weekday must be between 0-6.")
+	assert(w in Weekday.values(), "Weekday must be between 0-6. Was %s." % w)
+	advance_to_next_day()
 	while weekday != w:
 		advance_to_next_day()
 
@@ -376,7 +381,8 @@ func get_month_name() -> String:
 
 ## Advance to the start of the next month.
 func advance_to_month(m: Month):
-	assert(m in Month.keys(), "Month must be between 0-11.")
+	assert(m in Month.values(), "Month must be between 0-11. Was %s." % m)
+	advance_to_next_month()
 	while month != m:
 		advance_to_next_month()
 
@@ -453,9 +459,10 @@ func get_period() -> Period:
 	return (wrapi(hours-1, 0, 24) * len(Period)) / 24
 
 func advance_to_period(p: Period):
-	for i in len(Period):
-		if period != p:
-			advance_to_next_period()
+	assert(p in Period.values(), "Period must be between 0-5. Was %s." % p)
+	advance_to_next_period()
+	while period != p:
+		advance_to_next_period()
 
 func get_seconds_until_next_period() -> int:
 	var p := period
@@ -588,7 +595,7 @@ func get_horoscope_name() -> String:
 	return Horoscope.keys()[get_horoscope()]
 
 func get_zodiac() -> Zodiac:
-	return wrapi(years - 4, 0, 12) # int(floor(fposmod(z, 12)))
+	return wrapi(years - 4, 0, 12)
 
 func get_zodiac_name() -> String:
 	return Zodiac.keys()[get_zodiac()]
@@ -607,7 +614,10 @@ func advance(dict := {}):
 		var prop: Dictionary = list[i]
 		if prop.name in dict and prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
 			if prop.type == TYPE_INT:
-				self[prop.name] += dict[prop.name]
+				if prop.usage & PROPERTY_USAGE_CLASS_IS_ENUM:
+					self[prop.name] = dict[prop.name]
+				else:
+					self[prop.name] += dict[prop.name]
 				modified.append(prop.name)
 			elif prop.type == TYPE_STRING:
 				self[prop.name] = dict[prop.name]
@@ -618,12 +628,12 @@ func advance(dict := {}):
 
 func set_from_unix_time(u_secs: float):
 	var secs := int(floor(u_secs))
-	var ms   := int(round((u_secs - float(secs)) * 1000.0))
+	var ms := int(round((u_secs - float(secs)) * 1000.0))
 	var d := Time.get_datetime_dict_from_unix_time(secs)
 	copy(DateTime.create_from_datetime(d))
 	milliseconds += ms
 
-## Safely sets any number of properties by modifying from highest # of seconds to lowest.
+## Safely sets any number of properties by modifying from highest amount of milliseconds to lowest.
 func set_from_dict(dict: Dictionary):
 	var list := get_property_list()
 	var modified: PackedStringArray

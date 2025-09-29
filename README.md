@@ -1,5 +1,5 @@
 # DateTime
-`v1.2.4` Godot4.5dev+
+`v1.2.5` Godot4.5dev+
 
 `DateTime` and [`DateTimeline`](#datetimeline)
 
@@ -184,6 +184,15 @@ signal hour_started(hour: int)
 ```
 
 # Changes
+- 1.2.5
+	- Fixed `advance()` incorrectly setting enums off by one.
+	- Fixed `advance_to_` not working properly if given the current epoch.
+		- `advance_to_weekday()`
+		- `advance_to_month()`
+		- `advance_to_period()`
+		- `advance_to_ampm()`
+		- `advance_to_daytime()`
+		- `advance_to_weekend()`
 - 1.2.4
 	- Fixed `get_seconds_until_next_month()` not accounting for time in the current day.
 - 1.2.3
