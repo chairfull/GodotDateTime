@@ -495,9 +495,9 @@ func advance_to_period(p: Period):
 
 func get_seconds_until_next_period() -> int:
 	var p := period
-	var next := SECONDS_IN_PERIOD * (p + 1)
-	var curr := SECONDS_IN_PERIOD * p
-	return next - curr
+	var start_of_next_period := SECONDS_IN_PERIOD * (p + 1)
+	var current_seconds := get_seconds_into_day()
+	return start_of_next_period - current_seconds
 
 func get_period_name() -> String:
 	return Period.keys()[period]
@@ -514,8 +514,9 @@ func advance_to_next_period():
 
 func get_seconds_until_next_season() -> int:
 	var s := season
-	var next = SECONDS_IN_DAY * DAYS_IN_SEASON * (s + 1)
-	return next - SECONDS_IN_DAY * DAYS_IN_SEASON * s
+	var start_of_next_season := SECONDS_IN_DAY * DAYS_IN_SEASON * (s + 1)
+	var current_seconds := get_seconds_into_year()
+	return start_of_next_season - current_seconds
 
 func get_season() -> Season:
 	return wrapi(month - 2, 0, 12) / 3

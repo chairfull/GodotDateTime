@@ -1,5 +1,5 @@
 # DateTime
-`v1.4` Godot4.5dev+
+`v1.4.1` Godot4.5dev+
 
 `DateTime` and [`DateTimeline`](#datetimeline)
 
@@ -184,6 +184,9 @@ signal hour_started(hour: int)
 ```
 
 # Changes
+- 1.4.1
+	- Fixed `get_seconds_until_next_period()` being totally wrong.
+	- Fixed `get_seconds_until_next_season()` being totally wrong.
 - 1.4
 	- Added helpers `set_to_start_of_day()` `set_to_end_of_day()` `set_to_start_of_month()` `set_to_end_of_month()`
 	- Fixed `_get_epoch_milliseconds()` to handle leap days better.
