@@ -1,5 +1,6 @@
 @tool
 class_name Holidays extends RefCounted
+# WARNING: WIP, NOT READY
 
 enum HolidayType { FIXED_DATE, EASTER_RELATIVE, SOLSTICE }
 
