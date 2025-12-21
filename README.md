@@ -1,5 +1,5 @@
 # DateTime
-`v1.2.5` Godot4.5dev+
+`v1.3` Godot4.5dev+
 
 `DateTime` and [`DateTimeline`](#datetimeline)
 
@@ -184,6 +184,28 @@ signal hour_started(hour: int)
 ```
 
 # Changes
+- 1.3
+	- Added `Holidays` class with helper functions.
+	- Improved leap year handling:
+		- Added `_get_leap_days_up_to_year()`.
+		- Added `_get_epoch_milliseconds()`.
+		- Fixed `get_total_days()` to use `_get_leap_days_up_to_year()`.
+		- Fixed `get_total_seconds()` to use `get_total_days()`.
+		- Fixed `get_total_minutes()` to use `get_total_days()`.
+		- Fixed `get_total_hours()` to use `get_total_days()`.
+		- Fixed `set_days()` to handle leap years.
+		- Fixed `get_seconds_until_next_year()` to handle leap years.
+		- Fixed `_days_until_month()` to work for all month after February.
+		- Fixed `get_relation_difference()` to use `_get_epoch_milliseconds()`.
+	- Added `Era` enum. (This is a work in progress feature.)
+		- Added `era` `set_era()`.
+		- Added `absolute_year` `get_absolute_year()`.
+		- Added `E` to `_get_format()` `_set_format()` for getting epoch name.
+		- Fixed `y` `Y` in `_get_format()` `_set_format()` to use `absolute_year`.
+		- Fixed `get_zodiac()` to use `absolute_year`.
+	- Fixed `_to_format("p")` `_from_format("p")` to use "AM"/"PM" instead of "0"/"1".
+	- Fixed `get_months_until_date()` calling non-existant function.
+	- Changed `get_months_until_date()` `get_days_until_date()` `get_seconds_until_date()` to use `Month` enum instead of string.
 - 1.2.5
 	- Fixed `advance()` incorrectly setting enums off by one.
 	- Fixed `advance_to_` not working properly if given the current epoch.

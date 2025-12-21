@@ -3,16 +3,17 @@ class_name DateTime extends Resource
 ## WARNING: Godot's built in Time class starts Months and Weekdays at 1, while this starts at 0. So be careful combining the two.
 ## Originally designed with seconds as smallest epoch, but then converted to use milliseconds, so some things need reworking.
 
+enum Meridiem { AM, PM }
+enum Period { DAWN, MORNING, DAY, DUSK, EVENING, NIGHT }
 enum Weekday { SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY }
 enum Month { JANUARY, FEBRUARY, MARCH, APRIL, MAY, JUNE, JULY, AUGUST, SEPTEMBER, OCTOBER, NOVEMBER, DECEMBER }
-enum Period { DAWN, MORNING, DAY, DUSK, EVENING, NIGHT }
 enum Season { SPRING, SUMMER, AUTUMN, WINTER }
+enum Era { BC, AD }
 enum Planet { SUN, MOON, MARS, MERCURY, JUPITER, VENUS, SATURN }
 enum Horoscope { ARIES, TAURUS, GEMINI, CANCER, LEO, VIRGO, LIBRA, SCORPIUS, SAGITARIUS, CAPRICORN, AQUARIUS, PISCES, OPHIUCHUS }
 enum Zodiac { RAT, OX, TIGER, RABBIT, DRAGON, SNAKE, HORSE, GOAT, MONKEY, ROOSTER, DOG, PIG }
 enum Relation { PAST, PRESENT, FUTURE }
 enum Epoch { MILLISECOND, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR, DECADE, CENTURY }
-enum Meridiem { AM, PM }
 
 const WEEKEND := [ Weekday.SATURDAY, Weekday.SUNDAY ]
 
@@ -22,6 +23,7 @@ const WEEKEND := [ Weekday.SATURDAY, Weekday.SUNDAY ]
 const PROPERTIES := [ &"years", &"days", &"hours", &"minutes", &"seconds", &"milliseconds" ]
 
 const DAYS_IN_YEAR := 365
+const DAYS_IN_LEAP_YEAR := 366
 const DAYS_IN_SEASON := 91
 const DAYS_IN_WEEK := 7
 const HOURS_IN_DAY := 24
@@ -93,6 +95,8 @@ var date: String: get=get_date, set=set_date
 var season: Season: get=get_season, set=advance_to_season
 var season_name: String: get=get_season_name, set=advance_to_season_named
 var year: int: get=get_year, set=set_year
+var absolute_year: int: get=get_absolute_year
+var era: Era: get=get_era
 
 func _init(input: Variant = null):
 	init(input)
@@ -140,9 +144,25 @@ func set_years(y: int):
 	years = y
 	changed.emit()
 
+#func set_days(d: int):
+	#var add_years := d / DAYS_IN_YEAR
+	#days = wrapi(d, 0, DAYS_IN_YEAR)
+	#if add_years:
+		#years += add_years
+	#changed.emit()
+
 func set_days(d: int):
-	var add_years := d / DAYS_IN_YEAR
-	days = wrapi(d, 0, DAYS_IN_YEAR)
+	var add_years := 0
+	var remaining := d
+	while true:
+		var next_year := years + add_years
+		var year_len := DAYS_IN_YEAR + (1 if _is_leap_year(next_year) else 0)
+		if remaining >= year_len:
+			remaining -= year_len
+			add_years += 1
+		else:
+			break
+	days = remaining
 	if add_years:
 		years += add_years
 	changed.emit()
@@ -195,8 +215,7 @@ func get_total_seconds() -> int:
 	return seconds +\
 			(minutes * SECONDS_IN_MINUTE) +\
 			(hours * SECONDS_IN_HOUR) +\
-			(days * SECONDS_IN_DAY) +\
-			(years * SECONDS_IN_YEAR)
+			(get_total_days() * SECONDS_IN_DAY) # Includes years.
 
 func set_total_seconds(s: int):
 	reset()
@@ -205,8 +224,7 @@ func set_total_seconds(s: int):
 func get_total_minutes() -> int:
 	return minutes +\
 			(hours * MINUTES_IN_HOUR) +\
-			(days * MINUTES_IN_DAY) +\
-			(years * MINUTES_IN_YEAR)
+			(get_total_days() * MINUTES_IN_DAY)
 
 func get_seconds_until_next_minute() -> int:
 	return SECONDS_IN_MINUTE - seconds
@@ -217,8 +235,7 @@ func advance_to_next_minute():
 
 func get_total_hours() -> int:
 	return hours +\
-			(days * HOURS_IN_DAY) +\
-			(years * HOURS_IN_YEAR)
+			(get_total_days() * HOURS_IN_DAY)
 
 func get_seconds_until_next_hour() -> int:
 	return SECONDS_IN_HOUR - minutes * SECONDS_IN_MINUTE
@@ -271,6 +288,7 @@ func advance_to_weekend(w := true):
 
 func get_total_days() -> int:
 	return days +\
+			_get_leap_days_up_to_year(years) +\
 			(years * DAYS_IN_YEAR)
 
 func get_seconds_into_day() -> int:
@@ -433,25 +451,22 @@ func set_date(s: String):
 	if len(p) > 2:
 		years = p[2].to_int()
 
-func get_months_until_date(m: String, _d := 1) -> int:
+func get_months_until_date(m: Month, _d := 1) -> int:
 	# TODO: Take _d into account.
 	var dummy: DateTime = duplicate()
 	var mon := 0
-	for i in len(Month):
-		if dummy.month_name != m:
-			dummy.next_month()
-			mon += 1
-		else:
-			break
+	while dummy.month != m:
+		dummy.advance_to_next_month()
+		mon += 1
 	return mon
 
-func get_days_until_date(m: String, d := 1) -> int:
+func get_days_until_date(m: Month, d := 1) -> int:
 	return get_seconds_until_date(m, d) / SECONDS_IN_DAY
 
-func get_seconds_until_date(m: String, d := 1) -> int:
+func get_seconds_until_date(m: Month, d := 1) -> int:
 	var dummy: DateTime = duplicate()
 	var last_seconds := dummy.total_seconds
-	dummy.month_name = m
+	dummy.month = m
 	dummy.day_of_month = d
 	return dummy.total_seconds - last_seconds
 
@@ -516,14 +531,26 @@ func get_year() -> int:
 func set_year(y: int):
 	years = y
 
+func get_era() -> Era:
+	return Era.BC if years < 0 else Era.AD
+
+func get_absolute_year() -> int:
+	return abs(years)
+
 func get_year_delta() -> float:
 	return get_seconds_into_year() / float(SECONDS_IN_YEAR)
 
 func get_seconds_into_year() -> int:
 	return get_seconds_into_day() + (days * SECONDS_IN_DAY)
 
+#func get_seconds_until_next_year() -> int:
+	#return SECONDS_IN_YEAR - get_seconds_into_year()
+
 func get_seconds_until_next_year() -> int:
-	return SECONDS_IN_YEAR - get_seconds_into_year()
+	var seconds_in_year := SECONDS_IN_YEAR
+	if _is_leap_year(years):
+		seconds_in_year += SECONDS_IN_DAY
+	return seconds_in_year - get_seconds_into_year()
 
 func advance_to_next_year():
 	seconds += get_seconds_until_next_year()
@@ -566,6 +593,13 @@ func get_relation_difference_string(other: DateTime) -> String:
 	push_error("Shouldn't happen.")
 	return "???"
 
+func _get_epoch_milliseconds(epoch: Epoch) -> int:
+	match epoch:
+		Epoch.CENTURY: return (_get_leap_days_up_to_year(years + 100) * SECONDS_IN_DAY + SECONDS_IN_CENTURY) * MILLISECONDS_IN_SECOND
+		Epoch.DECADE: return (_get_leap_days_up_to_year(years + 10) * SECONDS_IN_DAY + SECONDS_IN_DECADE) * MILLISECONDS_IN_SECOND
+		Epoch.YEAR: return (_get_leap_days_up_to_year(years + 1) * SECONDS_IN_DAY + SECONDS_IN_YEAR) * MILLISECONDS_IN_SECOND
+		_: return EPOCH_MILLISECONDS[epoch]  # Fallback for sub-year
+
 ## Returns: [Relation, Maximum Epoch Type, Total of Maximum Epochs Type]
 func get_relation_difference(other: DateTime) -> Array:
 	var t1 := total_milliseconds
@@ -578,8 +612,9 @@ func get_relation_difference(other: DateTime) -> Array:
 	var rel: Relation = Relation.PAST if t2 < t1 else Relation.FUTURE
 	var dif := absi(t1 - t2)
 	for k in EPOCH_MILLISECONDS:
-		if dif >= EPOCH_MILLISECONDS[k]:
-			return [rel, k, dif / EPOCH_MILLISECONDS[k]]
+		var em := _get_epoch_milliseconds(k)
+		if dif >= em:
+			return [rel, k, dif / em]
 	
 	return []
 
@@ -595,7 +630,7 @@ func get_horoscope_name() -> String:
 	return Horoscope.keys()[get_horoscope()]
 
 func get_zodiac() -> Zodiac:
-	return wrapi(years - 4, 0, 12)
+	return wrapi(absolute_year - 4, 0, 12)
 
 func get_zodiac_name() -> String:
 	return Zodiac.keys()[get_zodiac()]
@@ -727,8 +762,9 @@ func _get_format_parts(text: String, format_str: String) -> Dictionary:
 
 func _to_format(code: String) -> String:
 	match code:
-		"Y": return "%04d" % year # Year with century.
-		"y": return "%02d" % (year % 100) # Year without century (00-99).
+		"Y": return "%04d" % absolute_year # Year with century.
+		"y": return "%02d" % (absolute_year % 100) # Year without century (00-99).
+		"E": return "BC" if era == Era.BC else "AD"  # Era indicatorlute
 		"m": return "%02d" % (month + 1) # Month as a zero-padded number (01-12).
 		"B": return month_name.capitalize() # Full month name.
 		"b": return month_name.substr(0, 3).capitalize() # Abbreviated month name.
@@ -741,7 +777,7 @@ func _to_format(code: String) -> String:
 			var h12 = hours % 12
 			if h12 == 0: h12 = 12
 			return "%02d" % h12
-		"p": return str(get_ampm()) # AM or PM.
+		"p": return Meridiem.keys()[get_ampm()] # AM or PM.
 		"M": return "%02d" % minutes # Minute as a zero-padded number (00-59).
 		"S": return "%02d" % seconds # Second as a zero-padded number (00-59).
 		#"f": return "%03d" % microseconds # TODO: Microseconds. Use %06d for microseconds.
@@ -756,6 +792,9 @@ func _to_format(code: String) -> String:
 
 func _from_format(code: String, token: String) -> Variant:
 	match code:
+		"E":
+			var upper := token.to_upper()
+			return Era.BC if upper == "BC" else Era.AD
 		"Y": return int(token) # Year with century.
 		"y":  # Year without century (00-99).
 			var yy = int(token)
@@ -769,7 +808,7 @@ func _from_format(code: String, token: String) -> Variant:
 		"w": return int(token) # Weekday as a number (0-6, Sunday is 0).
 		"H": return int(token) # Hour (24-hour clock) as a zero-padded number (00-23).
 		"I": return int(token) % 12  # Hour (12-hour clock) as a zero-padded number (01-12).
-		"p": return token # AM or PM.
+		"p": return Meridiem.AM if token.to_upper() == "AM" else Meridiem.PM # AM or PM.
 		"M": return int(token) # Minute as a zero-padded number (00-59).
 		"S": return int(token) # Second as a zero-padded number (00-59).
 		#"f": milliseconds = int(token) # TODO
@@ -793,11 +832,19 @@ func _from_format(code: String, token: String) -> Variant:
 	#push_error("Can't find month %s." % [mon])
 	#return Month.JANUARY
 
+## Returns the number of leap days that have occurred before the start of the given year.
+## Assumes Gregorian calendar (applies rules backward before 1582).
+static func _get_leap_days_up_to_year(y: int) -> int:
+	if y <= 0:
+		return 0
+	var prev := y - 1
+	return int(prev / 4) - int(prev / 100) + int(prev / 400)
+
 static func _is_leap_year(y: int) -> bool:
 	return y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)
 
 static func _days_until_month(y: int, m: int) -> int:
-	return DAYS_UNTIL_MONTH[m] + (1 if m == Month.FEBRUARY and _is_leap_year(y) else 0)
+	return DAYS_UNTIL_MONTH[m] + (1 if m > Month.FEBRUARY and _is_leap_year(y) else 0)
 
 static func _days_in_month(y: int, m: int) -> int:
 	return 29 if m == Month.FEBRUARY and _is_leap_year(y) else DAYS_IN_MONTH[m]
