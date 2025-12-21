@@ -188,6 +188,9 @@ signal hour_started(hour: int)
 	- Added helpers `set_to_start_of_day()` `set_to_end_of_day()` `set_to_start_of_month()` `set_to_end_of_month()`
 	- Fixed `_get_epoch_milliseconds()` to handle leap days better.
 	- Fixed `_get_leap_days_up_to_year()` to handle BC dates better.
+	- Fixed `get_seconds_until_next_hour()` to include current seconds, not just minutes.
+	- Fixed `get_seconds_into_week()` to include seconds into day.
+	- Fixed `advance_to_weekday_named()` not comparing strings in lowercase properly.
 - 1.3
 	- Added `Holidays` class with helper functions.
 	- Improved leap year handling:

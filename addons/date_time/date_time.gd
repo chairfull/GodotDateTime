@@ -144,13 +144,6 @@ func set_years(y: int):
 	years = y
 	changed.emit()
 
-#func set_days(d: int):
-	#var add_years := d / DAYS_IN_YEAR
-	#days = wrapi(d, 0, DAYS_IN_YEAR)
-	#if add_years:
-		#years += add_years
-	#changed.emit()
-
 func set_days(d: int):
 	var add_years := 0
 	var remaining := d
@@ -238,7 +231,7 @@ func get_total_hours() -> int:
 			(get_total_days() * HOURS_IN_DAY)
 
 func get_seconds_until_next_hour() -> int:
-	return SECONDS_IN_HOUR - minutes * SECONDS_IN_MINUTE
+	return SECONDS_IN_HOUR - (minutes * SECONDS_IN_MINUTE + seconds)
 
 ## Advances to the start of the next hour.
 func advance_to_next_hour():
@@ -337,7 +330,7 @@ func get_seconds_until_next_week() -> int:
 	return SECONDS_IN_WEEK - get_seconds_into_week()
 
 func get_seconds_into_week() -> int:
-	return weekday * SECONDS_IN_DAY
+	return weekday * SECONDS_IN_DAY + get_seconds_into_day()
 
 func get_weekday_planet() -> Planet:
 	return Planet.keys()[weekday]
@@ -346,8 +339,9 @@ func get_weekday_name() -> String:
 	return Weekday.keys()[weekday]
 	
 func advance_to_weekday_named(wd: String):
+	var wd_lower := wd.to_lower()
 	for key in Weekday.keys():
-		if wd.to_lower() == key or wd.to_lower().substr(0, 3) == key:
+		if wd_lower == key.to_lower() or wd_lower == key.to_lower().substr(0, 3):
 			advance_to_weekday(Weekday[key])
 			return true
 	push_error("No weekday: %s." % wd)
@@ -501,8 +495,8 @@ func advance_to_period(p: Period):
 
 func get_seconds_until_next_period() -> int:
 	var p := period
-	var next = SECONDS_IN_PERIOD * (p + 1)
-	var curr = SECONDS_IN_PERIOD * p
+	var next := SECONDS_IN_PERIOD * (p + 1)
+	var curr := SECONDS_IN_PERIOD * p
 	return next - curr
 
 func get_period_name() -> String:
