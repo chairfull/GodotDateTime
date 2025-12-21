@@ -1,5 +1,5 @@
 # DateTime
-`v1.3` Godot4.5dev+
+`v1.4` Godot4.5dev+
 
 `DateTime` and [`DateTimeline`](#datetimeline)
 
@@ -184,6 +184,10 @@ signal hour_started(hour: int)
 ```
 
 # Changes
+- 1.4
+	- Added helpers `set_to_start_of_day()` `set_to_end_of_day()` `set_to_start_of_month()` `set_to_end_of_month()`
+	- Fixed `_get_epoch_milliseconds()` to handle leap days better.
+	- Fixed `_get_leap_days_up_to_year()` to handle BC dates better.
 - 1.3
 	- Added `Holidays` class with helper functions.
 	- Improved leap year handling:

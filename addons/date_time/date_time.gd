@@ -244,6 +244,26 @@ func get_seconds_until_next_hour() -> int:
 func advance_to_next_hour():
 	seconds += get_seconds_until_next_hour()
 
+func set_to_start_of_day() -> void:
+	hours = 0
+	minutes = 0
+	seconds = 0
+	milliseconds = 0
+
+func set_to_end_of_day() -> void:
+	hours = 23
+	minutes = 59
+	seconds = 59
+	milliseconds = 999
+
+func set_to_start_of_month() -> void:
+	day_of_month = 1
+	set_to_start_of_day()
+
+func set_to_end_of_month() -> void:
+	day_of_month = _days_in_month(years, month)
+	set_to_end_of_day()
+
 func get_ampm() -> Meridiem:
 	return Meridiem.AM if hours < 12 else Meridiem.PM
 
@@ -595,10 +615,16 @@ func get_relation_difference_string(other: DateTime) -> String:
 
 func _get_epoch_milliseconds(epoch: Epoch) -> int:
 	match epoch:
-		Epoch.CENTURY: return (_get_leap_days_up_to_year(years + 100) * SECONDS_IN_DAY + SECONDS_IN_CENTURY) * MILLISECONDS_IN_SECOND
-		Epoch.DECADE: return (_get_leap_days_up_to_year(years + 10) * SECONDS_IN_DAY + SECONDS_IN_DECADE) * MILLISECONDS_IN_SECOND
-		Epoch.YEAR: return (_get_leap_days_up_to_year(years + 1) * SECONDS_IN_DAY + SECONDS_IN_YEAR) * MILLISECONDS_IN_SECOND
-		_: return EPOCH_MILLISECONDS[epoch]  # Fallback for sub-year
+		Epoch.CENTURY: 
+			var leap_days := _get_leap_days_up_to_year(years + 100) - _get_leap_days_up_to_year(years)
+			return (leap_days * SECONDS_IN_DAY + SECONDS_IN_CENTURY) * MILLISECONDS_IN_SECOND
+		Epoch.DECADE:
+			var leap_days := _get_leap_days_up_to_year(years + 10) - _get_leap_days_up_to_year(years)
+			return (leap_days * SECONDS_IN_DAY + SECONDS_IN_DECADE) * MILLISECONDS_IN_SECOND
+		Epoch.YEAR:
+			var leap_days := 1 if _is_leap_year(years) else 0
+			return (leap_days * SECONDS_IN_DAY + SECONDS_IN_YEAR) * MILLISECONDS_IN_SECOND
+		_: return EPOCH_MILLISECONDS[epoch]
 
 ## Returns: [Relation, Maximum Epoch Type, Total of Maximum Epochs Type]
 func get_relation_difference(other: DateTime) -> Array:
@@ -835,10 +861,17 @@ func _from_format(code: String, token: String) -> Variant:
 ## Returns the number of leap days that have occurred before the start of the given year.
 ## Assumes Gregorian calendar (applies rules backward before 1582).
 static func _get_leap_days_up_to_year(y: int) -> int:
-	if y <= 0:
+	if y == 0:
 		return 0
+	
 	var prev := y - 1
-	return int(prev / 4) - int(prev / 100) + int(prev / 400)
+	if y > 0:
+		return int(prev / 4) - int(prev / 100) + int(prev / 400)
+	else:
+		# For BC years, we need to handle negative division differently
+		# Note: There is no year 0 in traditional calendars, but we're treating it as such
+		prev = abs(prev + 1)  # Adjust for year 0 not existing historically
+		return -(int(prev / 4) - int(prev / 100) + int(prev / 400))
 
 static func _is_leap_year(y: int) -> bool:
 	return y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)
