@@ -181,18 +181,18 @@ func set_seconds(s: int):
 		minutes += add_minutes
 	changed.emit()
 
-func set_milliseconds(s: int):
+func set_milliseconds(s: int) -> void:
 	var add_seconds := s / MILLISECONDS_IN_SECOND
 	milliseconds = wrapi(s, 0, MILLISECONDS_IN_SECOND)
 	if add_seconds:
 		seconds += add_seconds
 	changed.emit()
 
-func reset():
+func reset() -> void:
 	for prop in PROPERTIES:
 		self[prop] = 0
 
-func copy(dt: DateTime):
+func copy(dt: DateTime) -> void:
 	for prop in PROPERTIES:
 		self[prop] = dt[prop]
 
@@ -223,7 +223,7 @@ func get_seconds_until_next_minute() -> int:
 	return SECONDS_IN_MINUTE - seconds
 
 ## Advances to the start of the next minute.
-func advance_to_next_minute():
+func advance_to_next_minute() -> void:
 	seconds += get_seconds_until_next_minute()
 
 func get_total_hours() -> int:
@@ -234,7 +234,7 @@ func get_seconds_until_next_hour() -> int:
 	return SECONDS_IN_HOUR - (minutes * SECONDS_IN_MINUTE + seconds)
 
 ## Advances to the start of the next hour.
-func advance_to_next_hour():
+func advance_to_next_hour() -> void:
 	seconds += get_seconds_until_next_hour()
 
 func set_to_start_of_day() -> void:
@@ -320,7 +320,7 @@ func get_days_until_weekend() -> int:
 	return 7
 
 ## Advance to the start of the next day.
-func advance_to_next_day():
+func advance_to_next_day() -> void:
 	seconds += get_seconds_until_next_day()
 
 func get_days_until(other: DateTime) -> int:
@@ -338,12 +338,12 @@ func get_weekday_planet() -> Planet:
 func get_weekday_name() -> String:
 	return Weekday.keys()[weekday]
 	
-func advance_to_weekday_named(wd: String):
+func advance_to_weekday_named(wd: String) -> void:
 	var wd_lower := wd.to_lower()
 	for key in Weekday.keys():
 		if wd_lower == key.to_lower() or wd_lower == key.to_lower().substr(0, 3):
 			advance_to_weekday(Weekday[key])
-			return true
+			return
 	push_error("No weekday: %s." % wd)
 
 func get_weekday() -> Weekday:
@@ -370,7 +370,7 @@ func get_weekday() -> Weekday:
 	#z += int(y / 4)
 	#return wrapi(z - 1, 0, 7)
 
-func advance_to_weekday(w: Weekday):
+func advance_to_weekday(w: Weekday) -> void:
 	assert(w in Weekday.values(), "Weekday must be between 0-6. Was %s." % w)
 	advance_to_next_day()
 	while weekday != w:
@@ -378,7 +378,7 @@ func advance_to_weekday(w: Weekday):
 
 ## Advance to the start of the next week.
 ## Can also set: weekend = false
-func advance_to_next_week():
+func advance_to_next_week() -> void:
 	seconds += get_seconds_until_next_week()
 
 func get_day_of_month() -> int:
@@ -391,20 +391,14 @@ func advance_to_day_of_month(d: int):
 
 func get_day_of_month_ordinal() -> String:
 	return ordinal(day_of_month)
-	
-func advance_to_day_of_month_ordinal(s: String):
-	var num := ""
-	for c in s:
-		if c in "1234567890":
-			num += c
-		else:
-			break
-	day_of_month = num.to_int()
+
+func advance_to_day_of_month_ordinal(s: String) -> void:
+	day_of_month = _parse_ordinal(s)
 
 func get_months() -> int:
 	return years * 12 + month
 
-func set_months(m):
+func set_months(m) -> void:
 	month = wrapi(m, 0, 12)
 	years = m / 12
 
@@ -412,13 +406,13 @@ func get_month_name() -> String:
 	return Month.keys()[month]
 
 ## Advance to the start of the next month.
-func advance_to_month(m: Month):
+func advance_to_month(m: Month) -> void:
 	assert(m in Month.values(), "Month must be between 0-11. Was %s." % m)
 	advance_to_next_month()
 	while month != m:
 		advance_to_next_month()
 
-func advance_to_month_named(m: String):
+func advance_to_month_named(m: String) -> void:
 	for mname in Month.keys():
 		if mname.to_lower() == m.to_lower() or mname.to_lower().substr(0, 3) == m.to_lower():
 			advance_to_month(Month[mname])
@@ -431,7 +425,7 @@ func get_month() -> Month:
 			return i
 	return -1
 
-func advance_to_next_month():
+func advance_to_next_month() -> void:
 	seconds += get_seconds_until_next_month()
 
 func get_seconds_until_next_month() -> int:
@@ -502,14 +496,14 @@ func get_seconds_until_next_period() -> int:
 func get_period_name() -> String:
 	return Period.keys()[period]
 
-func advance_to_period_named(p: String):
+func advance_to_period_named(p: String) -> void:
 	var index := Period.keys().find(p)
 	if index == -1:
 		push_error("No period: %s." % p)
 	else:
 		advance_to_period(index as Period)
 
-func advance_to_next_period():
+func advance_to_next_period() -> void:
 	seconds += get_seconds_until_next_period()
 
 func get_seconds_until_next_season() -> int:
@@ -537,7 +531,7 @@ func advance_to_season_named(s: String):
 	else:
 		push_error("No season: %s" % s)
 
-func advance_to_next_season():
+func advance_to_next_season() -> void:
 	seconds += get_seconds_until_next_season()
 
 func get_year() -> int:
@@ -567,7 +561,7 @@ func get_seconds_until_next_year() -> int:
 		seconds_in_year += SECONDS_IN_DAY
 	return seconds_in_year - get_seconds_into_year()
 
-func advance_to_next_year():
+func advance_to_next_year() -> void:
 	seconds += get_seconds_until_next_year()
 
 func difference(other: DateTime) -> DateTime:
@@ -663,7 +657,7 @@ func get_zodiac_emoji() -> String:
 	return ANIMAL_EMOJI[get_zodiac()]
 
 ## Safely advances any number of properties by modifying from highest # seconds to lowest.
-func advance(dict := {}):
+func advance(dict := {}) -> void:
 	var list := get_property_list()
 	var modified: PackedStringArray
 	for i in range(list.size()-1, -1, -1):
@@ -682,7 +676,7 @@ func advance(dict := {}):
 		if not key in modified:
 			push_error("DateTime has no \"%s\". Couldn't set to %s." % [key, dict[key]])
 
-func set_from_unix_time(u_secs: float):
+func set_from_unix_time(u_secs: float) -> void:
 	var secs := int(floor(u_secs))
 	var ms := int(round((u_secs - float(secs)) * 1000.0))
 	var d := Time.get_datetime_dict_from_unix_time(secs)
@@ -690,13 +684,35 @@ func set_from_unix_time(u_secs: float):
 	milliseconds += ms
 
 ## Safely sets any number of properties by modifying from highest amount of milliseconds to lowest.
-func set_from_dict(dict: Dictionary):
+func set_from_dict(dict: Dictionary) -> void:
 	var list := get_property_list()
+	var skip: PackedStringArray
 	var modified: PackedStringArray
 	for i in range(list.size()-1, -1, -1):
 		var prop: Dictionary = list[i]
+		if prop.name in skip:
+			continue
 		if prop.name in dict and prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
-			self[prop.name] = dict[prop.name]
+			if prop.name == &"month" or prop.name == &"month_name":
+				var d := 1
+				var m := 0
+				if &"day_of_month" in dict:
+					d = dict[&"day_of_month"]
+					skip.append(&"day_of_month")
+					modified.append(&"day_of_month")
+				elif &"day_of_month_ordinal" in dict:
+					d = _parse_ordinal(dict[&"day_of_month_ordinal"])
+					skip.append(&"day_of_month_ordinal")
+					modified.append(&"day_of_month_ordinal")
+				
+				if prop.name == &"month":
+					m = dict[prop.name]
+				elif prop.name == &"month_name":
+					m = _get_month_by_name(dict[prop.name])
+				
+				set_days(_days_until_month(years, m) + d - 1)
+			else:
+				self[prop.name] = dict[prop.name]
 			modified.append(prop.name)
 	for key in dict:
 		if not key in modified:
@@ -876,6 +892,24 @@ static func _days_until_month(y: int, m: int) -> int:
 
 static func _days_in_month(y: int, m: int) -> int:
 	return 29 if m == Month.FEBRUARY and _is_leap_year(y) else DAYS_IN_MONTH[m]
+
+static func _get_month_by_name(name: String) -> int:
+	var name_lower := name.to_lower()
+	for i in Month.size():
+		var month_key: String = Month.keys()[i].to_lower()
+		if name_lower == month_key or name_lower == month_key.substr(0, 3):
+			return i
+	push_error("Unknown month name: %s" % name)
+	return 0
+
+static func _parse_ordinal(s: String) -> int:
+	var num := ""
+	for c in s:
+		if c in "1234567890":
+			num += c
+		else:
+			break
+	return num.to_int()
 
 static func create_from_system() -> DateTime:
 	return create_from_datetime(Time.get_datetime_dict_from_system())

@@ -184,6 +184,8 @@ signal hour_started(hour: int)
 ```
 
 # Changes
+- 1.4.2
+	- Fixed `set_from_dict()` to better handle `month` `month_name`. #8
 - 1.4.1
 	- Fixed `get_seconds_until_next_period()` being totally wrong.
 	- Fixed `get_seconds_until_next_season()` being totally wrong.
