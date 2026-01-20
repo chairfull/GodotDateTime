@@ -1,5 +1,5 @@
 # DateTime
-`v1.4.1` Godot4.5dev+
+`v1.4.2` Godot4.5dev+
 
 `DateTime` and [`DateTimeline`](#datetimeline)
 
